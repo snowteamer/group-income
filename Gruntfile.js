@@ -596,6 +596,9 @@ module.exports = (grunt) => {
               vuePluginOptions.cache.clear()
             }
           }
+          // We're done with linting new or changed files and updating plugin caches.
+          // Run remaining tasks to make sure everything is ready before rebuilding.
+          grunt.task.run(tasks.filter(task => typeof task === 'string'))
           // Only rebuild the relevant entry point.
           try {
             if (filePath.startsWith(serviceWorkerDir)) {
@@ -615,9 +618,7 @@ module.exports = (grunt) => {
           } catch (error) {
             grunt.log.error(error.message)
           }
-          grunt.task.run(tasks.filter(task => typeof task === 'string'))
           grunt.task.run(['keepalive'])
-
           // Allow the task queue to move forward.
           killKeepAlive && killKeepAlive()
         })
