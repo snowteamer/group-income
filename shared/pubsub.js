@@ -57,7 +57,6 @@ export type PubSubClient = {
   nextConnectionAttemptDelayID: TimeoutID | void,
   +options: Object,
   +pendingSubscriptionSet: Set<string>,
-  pendingSyncSet: Set<string>,
   +pendingUnsubscriptionSet: Set<string>,
   pingTimeoutID: TimeoutID | void,
   shouldReconnect: boolean,
@@ -148,7 +147,6 @@ export function createClient (url: string, options?: Object = {}): PubSubClient 
     options: { ...defaultOptions, ...options },
     // Requested subscriptions for which we didn't receive a response yet.
     pendingSubscriptionSet: new Set(),
-    pendingSyncSet: new Set(),
     pendingUnsubscriptionSet: new Set(),
     pingTimeoutID: undefined,
     shouldReconnect: true,
@@ -342,11 +340,6 @@ const defaultClientEventHandlers = {
         client.socket?.close()
       }, options.pingTimeout)
     }
-    // We only need to handle contract resynchronization here when reconnecting.
-    // Not on initial connection, since the login code already does it.
-    if (!client.isNew) {
-      client.pendingSyncSet = new Set(client.pendingSubscriptionSet)
-    }
     // Send any pending subscription request.
     client.pendingSubscriptionSet.forEach((channelID) => {
       client.socket?.send(createRequest(REQUEST_TYPE.SUB, { channelID }))
@@ -374,7 +367,7 @@ const defaultClientEventHandlers = {
     console.info(`[pubsub] Scheduled connection attempt ${nth} in ~${delay} ms`)
   },
 
-  'subscription-succeded' (event: CustomEvent) {
+  'subscription-succeeded' (event: CustomEvent) {
     const { channelID } = event.detail
     console.debug(`[pubsub] Subscribed to channel ${channelID}`)
   }
@@ -422,7 +415,6 @@ const defaultMessageHandlers = {
       case REQUEST_TYPE.SUB: {
         console.warn(`[pubsub] Could not subscribe to ${channelID}`)
         client.pendingSubscriptionSet.delete(channelID)
-        client.pendingSyncSet.delete(channelID)
         break
       }
       case REQUEST_TYPE.UNSUB: {
@@ -444,11 +436,6 @@ const defaultMessageHandlers = {
         client.pendingSubscriptionSet.delete(channelID)
         client.subscriptionSet.add(channelID)
         sbp('okTurtles.events/emit', PUBSUB_SUBSCRIPTION_SUCCEEDED, client, { channelID })
-
-        if (client.pendingSyncSet.has(channelID)) {
-          sbp('chelonia/contract/sync', channelID)
-          client.pendingSyncSet.delete(channelID)
-        }
         break
       }
       case REQUEST_TYPE.UNSUB: {
