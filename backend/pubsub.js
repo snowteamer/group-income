@@ -26,7 +26,7 @@ const { bold } = require('chalk')
 const WebSocket = require('ws')
 
 const { PING, PONG, PUB, SUB, UNSUB } = NOTIFICATION_TYPE
-const { ERROR, SUCCESS } = RESPONSE_TYPE
+const { ERROR, OK } = RESPONSE_TYPE
 
 // Used to tag console output.
 const tag = '[pubsub]'
@@ -271,7 +271,7 @@ const defaultMessageHandlers = {
     } else {
       log('Already subscribed to', channelID)
     }
-    socket.send(createResponse(SUCCESS, { type: SUB, channelID }))
+    socket.send(createResponse(OK, { type: SUB, channelID }))
   },
 
   [UNSUB] ({ channelID }: UnsubMessage) {
@@ -287,7 +287,7 @@ const defaultMessageHandlers = {
         subscribers.delete(socket)
       }
     }
-    socket.send(createResponse(SUCCESS, { type: UNSUB, channelID }))
+    socket.send(createResponse(OK, { type: UNSUB, channelID }))
   }
 }
 
