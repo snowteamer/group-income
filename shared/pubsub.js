@@ -60,15 +60,13 @@ export type PubSubClient = {
 export type SubMessage = {
   [key: string]: JSONType,
   +type: 'sub',
-  +contractID: string,
-  +dontBroadcast: boolean
+  +contractID: string
 }
 
 export type UnsubMessage = {
   [key: string]: JSONType,
   +type: 'unsub',
-  +contractID: string,
-  +dontBroadcast: boolean
+  +contractID: string
 }
 
 // ====== Enums ====== //
@@ -180,9 +178,9 @@ export function createMessage (type: string, data: JSONType): string {
   return JSON.stringify({ type, data })
 }
 
-export function createRequest (type: RequestTypeEnum, data: JSONObject, dontBroadcast: boolean = false): string {
+export function createRequest (type: RequestTypeEnum, data: JSONObject): string {
   // Had to use Object.assign() instead of object spreading to make Flow happy.
-  return JSON.stringify(Object.assign({ type, dontBroadcast }, data))
+  return JSON.stringify(Object.assign({ type }, data))
 }
 
 // These handlers receive the PubSubClient instance through the `this` binding.
@@ -334,7 +332,7 @@ const defaultClientEventHandlers = {
     }
     // Send any pending subscription request.
     client.pendingSubscriptionSet.forEach((contractID) => {
-      client.socket?.send(createRequest(REQUEST_TYPE.SUB, { contractID }, true))
+      client.socket?.send(createRequest(REQUEST_TYPE.SUB, { contractID }))
     })
     // There should be no pending unsubscription since we just got connected.
   },
@@ -594,7 +592,7 @@ const publicMethods = {
   },
 
   // Unused for now.
-  pub (contractID: string, data: JSONType, dontBroadcast = false) {
+  pub (contractID: string, data: JSONType) {
   },
 
   /**
@@ -606,7 +604,7 @@ const publicMethods = {
    * - Calling this method again before the server has responded has no effect.
    * @param contractID - The ID of the contract whose updates we want to subscribe to.
    */
-  sub (contractID: string, dontBroadcast = false) {
+  sub (contractID: string) {
     const client = this
     const { socket } = this
 
@@ -615,7 +613,7 @@ const publicMethods = {
       client.pendingUnsubscriptionSet.delete(contractID)
 
       if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(createRequest(REQUEST_TYPE.SUB, { contractID }, dontBroadcast))
+        socket.send(createRequest(REQUEST_TYPE.SUB, { contractID }))
       }
     }
   },
@@ -629,7 +627,7 @@ const publicMethods = {
    * - Calling this method again before the server has responded has no effect.
    * @param contractID - The ID of the contract whose updates we want to unsubscribe from.
    */
-  unsub (contractID: string, dontBroadcast = false) {
+  unsub (contractID: string) {
     const client = this
     const { socket } = this
 
@@ -638,7 +636,7 @@ const publicMethods = {
       client.pendingUnsubscriptionSet.add(contractID)
 
       if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(createRequest(REQUEST_TYPE.UNSUB, { contractID }, dontBroadcast))
+        socket.send(createRequest(REQUEST_TYPE.UNSUB, { contractID }))
       }
     }
   }
